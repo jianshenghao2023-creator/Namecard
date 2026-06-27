@@ -31,7 +31,15 @@ https://jianshenghao2023-creator.github.io/Namecard/
 
 1. 先更新上一级目录里的 `namecard_contacts_enriched_v1.csv`。
 2. 在项目目录运行 `.\build_mobile_search.ps1`。
-3. 提交并推送 `mobile_search` 文件夹里的更新内容到 GitHub 的 `main` 分支。
+3. 提交并推送 `mobile_search` 文件夹里的更新内容到 GitHub 的 `main` 分支：
+
+```powershell
+cd E:\namecard
+git add mobile_search/contacts-data.json
+git commit -m "Update namecard data"
+git push
+```
+
 4. GitHub Actions 同步到 `gh-pages` 后，iPhone 下次联网打开时会自动同步新版数据。
 
 页面里的“导入/更新”按钮仍可作为备用：如果在线同步不方便，也可以手动选择 `mobile_data/namecard_contacts_data.json`。
