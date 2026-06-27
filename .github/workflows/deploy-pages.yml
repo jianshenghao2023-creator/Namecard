@@ -1,4 +1,4 @@
-name: Deploy static site to GitHub Pages
+name: Publish static site to gh-pages
 
 on:
   push:
@@ -10,34 +10,24 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
-  group: pages
+  group: gh-pages
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  publish:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
         with:
-          enablement: true
+          fetch-depth: 0
 
-      - name: Upload static site
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: mobile_search
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Publish mobile_search to gh-pages
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git subtree split --prefix mobile_search -b gh-pages-deploy
+          git push --force origin gh-pages-deploy:gh-pages

@@ -19,26 +19,27 @@ https://jianshenghao2023-creator.github.io/Namecard/
 部署方案：
 
 - GitHub Actions 工作流：`.github/workflows/deploy-pages.yml`
-- Pages 发布目录：`mobile_search`
+- 源码目录：`mobile_search`
+- Pages 发布分支：`gh-pages`
 - 数据文件：`mobile_search/contacts-data.json`
 
 ## GitHub 设置
 
-进入仓库：
+当前仓库已经推送了 `gh-pages` 分支，GitHub Pages 地址已可访问：
 
 ```text
-Settings -> Pages -> Build and deployment
+https://jianshenghao2023-creator.github.io/Namecard/
 ```
 
-将 Source 设置为：
+如果 GitHub Settings 里需要手动选择发布来源，请选择：
 
 ```text
-GitHub Actions
+Settings -> Pages -> Build and deployment -> Deploy from a branch
+Branch: gh-pages
+Folder: / (root)
 ```
 
-之后推送到 `main` 分支时，GitHub Actions 会自动发布静态站。
-
-如果你的 Pages 页面暂时看不到 Source 选项，也可以先到 `Actions` 里运行 `Deploy static site to GitHub Pages`。工作流里的 `actions/configure-pages` 已设置 `enablement: true`，会尝试自动启用 Pages。
+之后推送到 `main` 分支时，GitHub Actions 会自动把 `mobile_search` 同步到 `gh-pages` 分支。
 
 ## 首次推送
 
@@ -51,6 +52,7 @@ git remote add origin https://github.com/jianshenghao2023-creator/Namecard.git
 git add README.md .gitignore .github mobile_search build_mobile_search.ps1
 git commit -m "Deploy static namecard site to GitHub Pages"
 git push -u origin main
+git subtree push --prefix mobile_search origin gh-pages
 ```
 
 ## 更新网站数据
@@ -62,8 +64,8 @@ git push -u origin main
 .\build_mobile_search.ps1
 ```
 
-3. 提交并推送 `mobile_search/contacts-data.json` 的更新。
-4. 等待 GitHub Actions 部署完成。
+3. 提交并推送 `mobile_search/contacts-data.json` 的更新到 `main`。
+4. GitHub Actions 会自动同步到 `gh-pages` 分支并发布。
 
 ## 注意
 
