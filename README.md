@@ -38,6 +38,8 @@ GitHub Actions
 
 之后推送到 `main` 分支时，GitHub Actions 会自动发布静态站。
 
+如果你的 Pages 页面暂时看不到 Source 选项，也可以先到 `Actions` 里运行 `Deploy static site to GitHub Pages`。工作流里的 `actions/configure-pages` 已设置 `enablement: true`，会尝试自动启用 Pages。
+
 ## 首次推送
 
 如果本地目录还没有初始化 Git，可以执行：
