@@ -12,9 +12,9 @@ https://github.com/jianshenghao2023-creator/Namecard
 
 部署方式：
 
-1. 仓库 Settings -> Pages -> Build and deployment，Source 选择 `GitHub Actions`。如果暂时看不到 Source 选项，可以先到 Actions 运行部署工作流，工作流会尝试自动启用 Pages。
-2. 把项目推送到仓库的 `main` 分支。
-3. GitHub Actions 会自动发布 `mobile_search` 文件夹。
+1. `main` 分支保存项目源码。
+2. `gh-pages` 分支保存实际发布的网站文件。
+3. 推送 `main` 后，GitHub Actions 会自动把 `mobile_search` 同步到 `gh-pages` 分支。
 4. 发布后访问：
 
 ```text
@@ -31,8 +31,8 @@ https://jianshenghao2023-creator.github.io/Namecard/
 
 1. 先更新上一级目录里的 `namecard_contacts_enriched_v1.csv`。
 2. 在项目目录运行 `.\build_mobile_search.ps1`。
-3. 提交并推送 `mobile_search` 文件夹里的更新内容到 GitHub。
-4. GitHub Actions 发布完成后，iPhone 下次联网打开时会自动同步新版数据。
+3. 提交并推送 `mobile_search` 文件夹里的更新内容到 GitHub 的 `main` 分支。
+4. GitHub Actions 同步到 `gh-pages` 后，iPhone 下次联网打开时会自动同步新版数据。
 
 页面里的“导入/更新”按钮仍可作为备用：如果在线同步不方便，也可以手动选择 `mobile_data/namecard_contacts_data.json`。
 
