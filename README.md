@@ -12,7 +12,7 @@ https://github.com/jianshenghao2023-creator/Namecard
 
 部署方式：
 
-1. 仓库 Settings -> Pages -> Build and deployment，Source 选择 `GitHub Actions`。
+1. 仓库 Settings -> Pages -> Build and deployment，Source 选择 `GitHub Actions`。如果暂时看不到 Source 选项，可以先到 Actions 运行部署工作流，工作流会尝试自动启用 Pages。
 2. 把项目推送到仓库的 `main` 分支。
 3. GitHub Actions 会自动发布 `mobile_search` 文件夹。
 4. 发布后访问：
