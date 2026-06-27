@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f7f7f2">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="名片查询">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>名片查询</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="title-row">
+      <div class="title-block">
+        <h1>名片查询</h1>
+        <p id="metaLine">未导入数据</p>
+      </div>
+      <span id="storageBadge" class="status-badge">本地</span>
+    </div>
+    <label class="search-box" for="searchInput">
+      <span class="search-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="m16.5 16.5 4 4"></path>
+        </svg>
+      </span>
+      <input id="searchInput" type="search" inputmode="search" autocomplete="off" placeholder="输入公司名或人名">
+      <button id="clearSearch" class="icon-button" type="button" aria-label="清空搜索">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <path d="M18 6 6 18"></path>
+          <path d="m6 6 12 12"></path>
+        </svg>
+      </button>
+    </label>
+  </header>
+
+  <main>
+    <section class="import-panel" id="importPanel">
+      <div class="import-copy">
+        <strong id="importTitle">导入数据</strong>
+        <span id="importHint">联网时自动同步，导入为备用</span>
+      </div>
+      <div class="import-actions">
+        <label class="import-button" for="dataFileInput">
+          <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+            <path d="M12 3v12"></path>
+            <path d="m7 10 5 5 5-5"></path>
+            <path d="M5 21h14"></path>
+          </svg>
+          <span>导入/更新</span>
+        </label>
+        <button id="clearData" class="text-button" type="button">清除</button>
+      </div>
+      <input id="dataFileInput" type="file" accept=".json,application/json">
+    </section>
+
+    <nav class="controls" aria-label="查询视图">
+      <div class="segmented" role="tablist">
+        <button class="segment active" type="button" data-view="contacts" role="tab" aria-selected="true">联系人</button>
+        <button class="segment" type="button" data-view="companies" role="tab" aria-selected="false">公司</button>
+      </div>
+      <select id="filterSelect" aria-label="筛选">
+        <option value="all">全部</option>
+        <option value="expo">2026希腊海事展</option>
+        <option value="has-phone">有电话</option>
+        <option value="has-email">有邮箱</option>
+      </select>
+    </nav>
+
+    <section class="result-head">
+      <strong id="resultCount">0 条</strong>
+      <span id="versionLine"></span>
+    </section>
+
+    <section id="results" class="results" aria-live="polite"></section>
+  </main>
+
+  <template id="emptyTemplate">
+    <div class="empty-state">
+      <strong>没有匹配结果</strong>
+      <span>换一个公司名、人名、邮箱或电话试试。</span>
+    </div>
+  </template>
+
+  <script src="app-online-sync-v2.js"></script>
+</body>
+</html>

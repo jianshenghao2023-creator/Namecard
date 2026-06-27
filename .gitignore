@@ -1,0 +1,15 @@
+# Local source scans and generated analysis files are not needed for Pages deployment.
+*.pdf
+*.xlsx
+*.csv
+*.zip
+
+_analysis/
+__pycache__/
+mobile_data/
+
+# Local operating-system/editor noise.
+.DS_Store
+Thumbs.db
+*.tmp
+*.log
