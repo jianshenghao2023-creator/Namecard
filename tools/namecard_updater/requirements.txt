@@ -1,0 +1,4 @@
+pillow>=10.0
+openpyxl>=3.1
+pypdfium2>=4.30
+pyinstaller>=6.0

@@ -13,3 +13,11 @@ mobile_data/
 Thumbs.db
 *.tmp
 *.log
+
+# Local executable build artifacts.
+tools/namecard_updater/.venv/
+tools/namecard_updater/.venv_tk/
+tools/namecard_updater/.venv_gui/
+tools/namecard_updater/build/
+tools/namecard_updater/dist/
+tools/namecard_updater/*.spec
