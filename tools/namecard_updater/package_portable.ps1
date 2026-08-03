@@ -112,7 +112,7 @@ pause
 "@
 [System.IO.File]::WriteAllText((Join-Path $packageRoot "Install_Git.cmd"), $gitCmd, [System.Text.UTF8Encoding]::new($false))
 
-$readme = @"
+$readme = @'
 # NamecardPortable 使用说明
 
 这是名片系统的便携程序包。解压后，整个文件夹就是一个可继续维护和发布的项目目录。
@@ -159,9 +159,9 @@ NamecardUpdater.exe
 当前数据：
 
 ```text
-contacts = $contacts
-companies = $companies
-version = $version
+contacts = __CONTACTS__
+companies = __COMPANIES__
+version = __VERSION__
 ```
 
 ## 其它电脑需要什么
@@ -215,7 +215,8 @@ GitHub Actions 自动发布到 gh-pages
 ```
 
 如果第一次在新电脑上 push，Git 可能要求登录 GitHub。按浏览器提示完成授权即可。
-"@
+'@
+$readme = $readme.Replace("__CONTACTS__", $contacts).Replace("__COMPANIES__", $companies).Replace("__VERSION__", $version)
 [System.IO.File]::WriteAllText((Join-Path $packageRoot "README_先读我.md"), $readme, [System.Text.UTF8Encoding]::new($false))
 
 if (Test-Path -LiteralPath $zipPath -PathType Leaf) {
