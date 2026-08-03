@@ -22,3 +22,10 @@ tools/namecard_updater/build/
 tools/namecard_updater/dist/
 tools/namecard_updater/*.spec
 portable_packages/
+
+# Root-level files generated only inside portable packages.
+/NamecardUpdater.exe
+/Start_NamecardUpdater.cmd
+/Install_Free_OCR_Tesseract.cmd
+/Install_Git.cmd
+/README_FIRST.md
