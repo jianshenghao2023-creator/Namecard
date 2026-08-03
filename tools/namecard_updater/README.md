@@ -45,6 +45,23 @@ cd E:\namecard\tools\namecard_updater
 E:\namecard\tools\namecard_updater\dist\NamecardUpdater.exe
 ```
 
+## 生成便携包
+
+如果要复制到其它电脑使用，先构建 exe，然后运行：
+
+```powershell
+cd E:\namecard
+.\tools\namecard_updater\package_portable.ps1
+```
+
+生成的 zip 位于：
+
+```text
+E:\namecard\portable_packages
+```
+
+便携包包含程序、当前 CSV/XLSX 主数据、网页发布目录、`.git/.github`、安装 OCR/Git 的脚本和使用说明；不包含历史 PDF 扫描件和 `_analysis` 分析图片。
+
 ## 使用
 
 1. 双击 `NamecardUpdater.exe`。

@@ -21,3 +21,4 @@ tools/namecard_updater/.venv_gui/
 tools/namecard_updater/build/
 tools/namecard_updater/dist/
 tools/namecard_updater/*.spec
+portable_packages/
