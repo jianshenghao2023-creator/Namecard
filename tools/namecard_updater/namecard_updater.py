@@ -11,6 +11,7 @@ import subprocess
 import sys
 import threading
 import time
+import unicodedata
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -313,6 +314,141 @@ def join_unique(values: list[str], separator: str = "; ") -> str:
             seen.add(value)
             out.append(value)
     return separator.join(out)
+
+
+def normalize_lookup_text(value: str) -> str:
+    value = clean_text(value)
+    value = unicodedata.normalize("NFKD", value)
+    value = "".join(ch for ch in value if not unicodedata.combining(ch))
+    value = value.lower().replace("&", "and")
+    return re.sub(r"[^a-z0-9\u4e00-\u9fff]+", "", value)
+
+
+def contact_display_name(row: dict[str, str]) -> str:
+    return clean_text(row.get("person_name", "") or row.get("chinese_name", ""))
+
+
+def contact_company(row: dict[str, str]) -> str:
+    return clean_text(row.get("company_normalized", "") or row.get("company", ""))
+
+
+def contact_label(row: dict[str, str], fallback: str = "") -> str:
+    record_id = clean_text(row.get("record_id", ""))
+    name = contact_display_name(row)
+    company = contact_company(row)
+    email = clean_text(row.get("email_primary", ""))
+    parts = [part for part in [record_id, name, company, email] if part]
+    return " | ".join(parts) if parts else fallback
+
+
+def contact_emails(row: dict[str, str]) -> set[str]:
+    emails: set[str] = set()
+    for field_name in ["email_primary", "email_secondary"]:
+        raw = row.get(field_name, "") or ""
+        for match in EMAIL_RE.finditer(raw):
+            emails.add(normalize_email(match.group(0)))
+    return emails
+
+
+def phone_key(raw: str) -> str:
+    digits = re.sub(r"\D", "", raw or "")
+    if digits.startswith("00"):
+        digits = digits[2:]
+    if len(digits) < 7:
+        return ""
+    return digits[-9:] if len(digits) >= 9 else digits
+
+
+def contact_phone_keys(row: dict[str, str]) -> set[str]:
+    keys: set[str] = set()
+    for field_name in ["mobile", "phone"]:
+        raw = row.get(field_name, "") or ""
+        for match in PHONE_RE.finditer(raw):
+            key = phone_key(match.group(1))
+            if key:
+                keys.add(key)
+        key = phone_key(raw)
+        if key:
+            keys.add(key)
+    return keys
+
+
+def contact_name_company_key(row: dict[str, str]) -> str:
+    name = normalize_lookup_text(contact_display_name(row))
+    company = normalize_lookup_text(contact_company(row))
+    if not name or not company:
+        return ""
+    return f"{name}|{company}"
+
+
+def find_duplicate_reports(
+    drafts: list[ContactDraft],
+    existing_rows: list[dict[str, str]],
+    replace_same_pdf: bool,
+) -> dict[int, list[str]]:
+    source_names = {source_basename(draft.data).lower() for draft in drafts if source_basename(draft.data)}
+    filtered_existing = []
+    for row in existing_rows:
+        if replace_same_pdf and source_basename(row).lower() in source_names:
+            continue
+        filtered_existing.append(row)
+
+    email_index: dict[str, list[dict[str, str]]] = defaultdict(list)
+    phone_index: dict[str, list[dict[str, str]]] = defaultdict(list)
+    name_company_index: dict[str, list[dict[str, str]]] = defaultdict(list)
+    for row in filtered_existing:
+        for email in contact_emails(row):
+            email_index[email].append(row)
+        for key in contact_phone_keys(row):
+            phone_index[key].append(row)
+        key = contact_name_company_key(row)
+        if key:
+            name_company_index[key].append(row)
+
+    reports: dict[int, list[str]] = defaultdict(list)
+    for index, draft in enumerate(drafts):
+        row = select_columns(draft.data, ENRICHED_COLUMNS)
+        for email in sorted(contact_emails(row)):
+            for match in email_index.get(email, []):
+                reports[index].append(f"邮箱重复：{email} -> {contact_label(match)}")
+        for key in sorted(contact_phone_keys(row)):
+            for match in phone_index.get(key, []):
+                reports[index].append(f"电话重复：尾号/号码 {key} -> {contact_label(match)}")
+        key = contact_name_company_key(row)
+        for match in name_company_index.get(key, []):
+            reports[index].append(f"姓名+公司重复 -> {contact_label(match)}")
+
+    batch_rows = [select_columns(draft.data, ENRICHED_COLUMNS) for draft in drafts]
+    for index, row in enumerate(batch_rows):
+        row_emails = contact_emails(row)
+        row_phones = contact_phone_keys(row)
+        row_name_company = contact_name_company_key(row)
+        for other_index, other in enumerate(batch_rows):
+            if other_index <= index:
+                continue
+            label = contact_label(other, fallback=f"第 {other_index + 1} 条")
+            email_overlap = row_emails & contact_emails(other)
+            phone_overlap = row_phones & contact_phone_keys(other)
+            if email_overlap:
+                reports[index].append(f"本批邮箱重复：{', '.join(sorted(email_overlap))} -> {label}")
+                reports[other_index].append(f"本批邮箱重复：{', '.join(sorted(email_overlap))} -> {contact_label(row, fallback=f'第 {index + 1} 条')}")
+            if phone_overlap:
+                reports[index].append(f"本批电话重复：{', '.join(sorted(phone_overlap))} -> {label}")
+                reports[other_index].append(f"本批电话重复：{', '.join(sorted(phone_overlap))} -> {contact_label(row, fallback=f'第 {index + 1} 条')}")
+            if row_name_company and row_name_company == contact_name_company_key(other):
+                reports[index].append(f"本批姓名+公司重复 -> {label}")
+                reports[other_index].append(f"本批姓名+公司重复 -> {contact_label(row, fallback=f'第 {index + 1} 条')}")
+
+    return {index: join_unique(items, "\n").split("\n") for index, items in reports.items() if items}
+
+
+def duplicate_summary(items: list[str]) -> str:
+    if not items:
+        return ""
+    labels: list[str] = []
+    for item in items:
+        labels.append(item.split("：", 1)[0].split(" -> ", 1)[0])
+    return join_unique(labels, "/") or "可能重复"
 
 
 def ensure_url(raw: str) -> str:
@@ -1182,7 +1318,7 @@ class NamecardUpdaterApp:
         main.add(left, weight=3)
         main.add(right, weight=2)
 
-        columns = ("record_id", "person_name", "company", "title", "email", "mobile", "category", "confidence")
+        columns = ("record_id", "person_name", "company", "title", "email", "mobile", "category", "confidence", "duplicate")
         self.tree = ttk.Treeview(left, columns=columns, show="headings", height=18)
         headings = {
             "record_id": "编号",
@@ -1193,11 +1329,13 @@ class NamecardUpdaterApp:
             "mobile": "手机",
             "category": "分类",
             "confidence": "置信度",
+            "duplicate": "重复检查",
         }
-        widths = {"record_id": 70, "person_name": 140, "company": 210, "title": 220, "email": 210, "mobile": 130, "category": 70, "confidence": 80}
+        widths = {"record_id": 70, "person_name": 140, "company": 210, "title": 220, "email": 210, "mobile": 130, "category": 70, "confidence": 80, "duplicate": 150}
         for column in columns:
             self.tree.heading(column, text=headings[column])
             self.tree.column(column, width=widths[column], anchor="w")
+        self.tree.tag_configure("duplicate", foreground="#B42318")
         self.tree.pack(fill="both", expand=True)
         self.tree.bind("<<TreeviewSelect>>", self.on_select)
 
@@ -1206,6 +1344,7 @@ class NamecardUpdaterApp:
         ttk.Button(buttons, text="新增空行", command=self.add_blank).pack(side="left", padx=3)
         ttk.Button(buttons, text="删除选中", command=self.delete_selected).pack(side="left", padx=3)
         ttk.Button(buttons, text="保存当前行", command=self.save_current).pack(side="left", padx=3)
+        ttk.Button(buttons, text="检查重复", command=self.check_duplicates_ui).pack(side="left", padx=3)
         ttk.Checkbutton(buttons, text="替换同 PDF 既有记录", variable=self.replace_same_pdf).pack(side="left", padx=12)
         ttk.Checkbutton(buttons, text="写入后发布", variable=self.publish_after_write).pack(side="left", padx=6)
         ttk.Button(buttons, text="写入并发布", command=self.write_publish_thread).pack(side="right", padx=3)
@@ -1370,13 +1509,49 @@ class NamecardUpdaterApp:
             draft.set("industry_tags", infer_tags(draft.get("company_normalized"), draft.get("title"), draft.ocr_text))
         self.refresh_table(select_index=self.current_index)
 
+    def duplicate_reports(self) -> dict[int, list[str]]:
+        try:
+            project = Path(self.project_dir.get()).resolve()
+            existing = load_template_contacts(project)
+        except Exception:
+            existing = []
+        return find_duplicate_reports(self.contacts, existing, self.replace_same_pdf.get())
+
+    def duplicate_report_text(self, reports: dict[int, list[str]]) -> str:
+        lines: list[str] = []
+        for index in sorted(reports):
+            draft = self.contacts[index]
+            title = contact_label(draft.data, fallback=f"第 {index + 1} 条")
+            lines.append(f"第 {index + 1} 条：{title}")
+            for item in reports[index][:6]:
+                lines.append(f"  - {item}")
+        return "\n".join(lines)
+
+    def check_duplicates_ui(self) -> None:
+        if self.current_index is not None:
+            self.save_current()
+        reports = self.duplicate_reports()
+        if not reports:
+            messagebox.showinfo("重复检查", "没有发现明显重复。")
+            self.log("重复检查：没有发现明显重复。")
+            return
+        text = self.duplicate_report_text(reports)
+        if len(text) > 3500:
+            text = text[:3500] + "\n..."
+        messagebox.showwarning("发现可能重复", text)
+        self.log(f"重复检查：发现 {len(reports)} 条候选联系人可能重复。")
+        self.refresh_table(select_index=self.current_index)
+
     def refresh_table(self, select_index: int | None = None) -> None:
         self.tree.delete(*self.tree.get_children())
+        reports = self.duplicate_reports() if self.contacts else {}
         for index, draft in enumerate(self.contacts):
+            duplicate_text = duplicate_summary(reports.get(index, []))
             self.tree.insert(
                 "",
                 "end",
                 iid=str(index),
+                tags=("duplicate",) if duplicate_text else (),
                 values=(
                     draft.get("record_id"),
                     draft.get("person_name") or draft.get("chinese_name"),
@@ -1386,6 +1561,7 @@ class NamecardUpdaterApp:
                     draft.get("mobile"),
                     draft.get("primary_category_code"),
                     draft.get("confidence"),
+                    duplicate_text,
                 ),
             )
         if select_index is not None and 0 <= select_index < len(self.contacts):
@@ -1422,7 +1598,11 @@ class NamecardUpdaterApp:
                     drafts.append(draft)
             self.contacts = drafts
             self.root.after(0, lambda: self.refresh_table(select_index=0 if self.contacts else None))
-            self.log(f"识别完成：{len(self.contacts)} 条候选联系人。请逐条确认。")
+            reports = find_duplicate_reports(self.contacts, existing, self.replace_same_pdf.get())
+            if reports:
+                self.log(f"识别完成：{len(self.contacts)} 条候选联系人，其中 {len(reports)} 条可能重复。请检查“重复检查”列。")
+            else:
+                self.log(f"识别完成：{len(self.contacts)} 条候选联系人，未发现明显重复。")
         except Exception as exc:
             self.log(f"失败：{exc}")
             messagebox.showerror("识别失败", str(exc))
@@ -1440,6 +1620,18 @@ class NamecardUpdaterApp:
                     raise RuntimeError(f"第 {index} 行缺少姓名。")
                 if not draft.get("company_normalized") and not draft.get("company"):
                     raise RuntimeError(f"第 {index} 行缺少公司。")
+            reports = self.duplicate_reports()
+            if reports:
+                text = self.duplicate_report_text(reports)
+                if len(text) > 3500:
+                    text = text[:3500] + "\n..."
+                proceed = messagebox.askyesno(
+                    "发现可能重复",
+                    f"发现 {len(reports)} 条候选联系人可能重复。\n\n{text}\n\n仍然写入并继续发布吗？",
+                )
+                if not proceed:
+                    self.log("已取消写入：存在可能重复的联系人。")
+                    return
             self.log("写回主表并生成网页数据。")
             contacts, companies, version = regenerate_outputs(project, self.contacts, self.replace_same_pdf.get())
             self.log(f"已生成：contacts={contacts}, companies={companies}, version={version}")
