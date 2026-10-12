@@ -15,7 +15,6 @@
 
   let meta = {};
   let contacts = [];
-  let copyStatusTimer;
 
   const textFields = [
     'record_id',
@@ -53,8 +52,7 @@
     importPanel: document.getElementById('importPanel'),
     importTitle: document.getElementById('importTitle'),
     importHint: document.getElementById('importHint'),
-    emptyTemplate: document.getElementById('emptyTemplate'),
-    copyStatus: document.getElementById('copyStatus')
+    emptyTemplate: document.getElementById('emptyTemplate')
   };
 
   init();
@@ -100,19 +98,6 @@
   }
 
   function bindEvents() {
-    els.results.addEventListener('click', async (event) => {
-      const button = event.target.closest('.copy-button');
-      if (!button || !els.results.contains(button)) {
-        return;
-      }
-      const value = button.dataset.copy;
-      try {
-        await copyText(value);
-        showCopyStatus(`已复制${button.dataset.label}`);
-      } catch (error) {
-        showCopyStatus('复制失败，请长按文字选择复制');
-      }
-    });
     els.searchInput.addEventListener('input', () => {
       state.query = els.searchInput.value;
       render();
@@ -348,14 +333,14 @@
         <div class="card-main">
           <div class="card-title">
             <div>
-              ${copyable(contact.displayName, 'name', '姓名')}
-              ${copyable(contact.displayCompany, 'company', '公司')}
+              ${line(contact.displayName, 'name')}
+              ${line(contact.displayCompany, 'company')}
             </div>
           </div>
-          ${copyable(contact.title, 'subline', '职位')}
-          ${copyable(location, 'subline', '地点')}
+          ${line(contact.title, 'subline')}
+          ${line(location, 'subline')}
           <div class="badges">
-            ${category ? copyable(category, 'badge accent', '分类') : ''}
+            ${badge(category, 'accent')}
             ${contact.isExpo ? badge('2026希腊海事展', 'warn') : ''}
           </div>
         </div>
@@ -379,19 +364,19 @@
     const countries = Array.from(company.countries).filter(Boolean).slice(0, 4).join(' / ');
     const people = company.people.slice(0, 12).map((person) => `
       <div class="person-row">
-        ${copyable(person.displayName, 'person-name', '姓名')}
-        ${copyable(person.title, 'person-detail', '职位')}
-        ${copyable(person.email_primary || person.email_secondary, 'person-detail', '邮箱')}
-        ${copyable(person.mobile || person.phone, 'person-detail', '电话')}
+        ${line(person.displayName, 'person-name')}
+        ${line(person.title, 'person-detail')}
+        ${line(person.email_primary || person.email_secondary, 'person-detail')}
+        ${line(person.mobile || person.phone, 'person-detail')}
       </div>
     `).join('');
     return `
       <article class="card company-card">
         <div class="card-main">
-          ${copyable(company.name, 'name', '公司')}
+          ${line(company.name, 'name')}
           ${line(`${company.people.length} 位联系人`, 'subline')}
-          ${copyable(categories, 'subline', '分类')}
-          ${copyable(countries, 'subline', '国家')}
+          ${line(categories, 'subline')}
+          ${line(countries, 'subline')}
           <div class="badges">
             ${company.hasExpo ? badge('2026希腊海事展', 'warn') : ''}
           </div>
@@ -587,50 +572,7 @@
   }
 
   function detail(label, value) {
-    return value ? copyable(value, 'detail-row', label, `<strong>${escapeHtml(label)}：</strong>`) : '';
-  }
-
-  function copyable(value, className, label, prefix = '') {
-    if (!value) {
-      return '';
-    }
-    return `<div class="copyable ${className}"><span class="copy-text">${prefix}${escapeHtml(value)}</span>` +
-      `<button class="copy-button" type="button" data-copy="${escapeAttribute(value)}" data-label="${escapeAttribute(label)}" aria-label="复制${escapeAttribute(label)}" title="复制${escapeAttribute(label)}">` +
-      '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="8" y="8" width="13" height="13" rx="2"></rect><path d="M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3"></path></svg></button></div>';
-  }
-
-  async function copyText(value) {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      try {
-        await navigator.clipboard.writeText(value);
-        return;
-      } catch (error) {
-        // Some mobile browsers only allow the legacy copy command.
-      }
-    }
-    const input = document.createElement('textarea');
-    input.value = value;
-    input.setAttribute('readonly', '');
-    input.style.position = 'fixed';
-    input.style.opacity = '0';
-    document.body.appendChild(input);
-    input.focus();
-    input.select();
-    input.setSelectionRange(0, input.value.length);
-    const copied = document.execCommand('copy');
-    input.remove();
-    if (!copied) {
-      throw new Error('Copy command failed');
-    }
-  }
-
-  function showCopyStatus(message) {
-    window.clearTimeout(copyStatusTimer);
-    els.copyStatus.textContent = message;
-    els.copyStatus.classList.add('visible');
-    copyStatusTimer = window.setTimeout(() => {
-      els.copyStatus.classList.remove('visible');
-    }, 2200);
+    return value ? `<div class="detail-row"><strong>${escapeHtml(label)}：</strong>${escapeHtml(value)}</div>` : '';
   }
 
   function badge(value, tone) {
