@@ -27,6 +27,8 @@ https://jianshenghao2023-creator.github.io/Namecard/
 2. 第一次打开时保持联网，等待页面显示联系人数量。
 3. 之后即使没有网络，也可以使用上次保存的数据查询。
 
+联系人和公司页面中，点击文字旁的复制图标可复制对应字段；也可以长按文字选择复制。
+
 ## 更新数据
 
 1. 先更新上一级目录里的 `namecard_contacts_enriched_v1.csv`。
